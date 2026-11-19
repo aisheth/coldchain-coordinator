@@ -10,33 +10,219 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
+import { Route as CatalogueRouteImport } from './routes/catalogue'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as VendorsRouteImport } from './routes/vendors'
+import { Route as WorkersRouteImport } from './routes/workers'
+import { Route as ProcurementIndexRouteImport } from './routes/procurement.index'
+import { Route as ProcurementNewRouteImport } from './routes/procurement.new'
+import { Route as ProjectsIndexRouteImport } from './routes/projects.index'
+import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
+import { Route as TasksIdRouteImport } from './routes/tasks.$id'
+import { Route as WorkerIndexRouteImport } from './routes/worker.index'
+import { Route as WorkerHistoryRouteImport } from './routes/worker.history'
+import { Route as WorkerProfileRouteImport } from './routes/worker.profile'
+import { Route as WorkerTaskIdRouteImport } from './routes/worker.task.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CatalogueRoute = CatalogueRouteImport.update({
+  id: '/catalogue',
+  path: '/catalogue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VendorsRoute = VendorsRouteImport.update({
+  id: '/vendors',
+  path: '/vendors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkersRoute = WorkersRouteImport.update({
+  id: '/workers',
+  path: '/workers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProcurementIndexRoute = ProcurementIndexRouteImport.update({
+  id: '/procurement/',
+  path: '/procurement/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProcurementNewRoute = ProcurementNewRouteImport.update({
+  id: '/procurement/new',
+  path: '/procurement/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsIdRoute = ProjectsIdRouteImport.update({
+  id: '/projects/$id',
+  path: '/projects/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksIdRoute = TasksIdRouteImport.update({
+  id: '/tasks/$id',
+  path: '/tasks/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerIndexRoute = WorkerIndexRouteImport.update({
+  id: '/worker/',
+  path: '/worker/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerHistoryRoute = WorkerHistoryRouteImport.update({
+  id: '/worker/history',
+  path: '/worker/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerProfileRoute = WorkerProfileRouteImport.update({
+  id: '/worker/profile',
+  path: '/worker/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerTaskIdRoute = WorkerTaskIdRouteImport.update({
+  id: '/worker/task/$id',
+  path: '/worker/task/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/catalogue': typeof CatalogueRoute
+  '/settings': typeof SettingsRoute
+  '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
+  '/procurement/new': typeof ProcurementNewRoute
+  '/projects/$id': typeof ProjectsIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/worker/history': typeof WorkerHistoryRoute
+  '/worker/profile': typeof WorkerProfileRoute
+  '/procurement/': typeof ProcurementIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/worker/': typeof WorkerIndexRoute
+  '/worker/task/$id': typeof WorkerTaskIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/catalogue': typeof CatalogueRoute
+  '/settings': typeof SettingsRoute
+  '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
+  '/procurement/new': typeof ProcurementNewRoute
+  '/projects/$id': typeof ProjectsIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/worker/history': typeof WorkerHistoryRoute
+  '/worker/profile': typeof WorkerProfileRoute
+  '/procurement': typeof ProcurementIndexRoute
+  '/projects': typeof ProjectsIndexRoute
+  '/worker': typeof WorkerIndexRoute
+  '/worker/task/$id': typeof WorkerTaskIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
+  '/catalogue': typeof CatalogueRoute
+  '/settings': typeof SettingsRoute
+  '/vendors': typeof VendorsRoute
+  '/workers': typeof WorkersRoute
+  '/procurement/new': typeof ProcurementNewRoute
+  '/projects/$id': typeof ProjectsIdRoute
+  '/tasks/$id': typeof TasksIdRoute
+  '/worker/history': typeof WorkerHistoryRoute
+  '/worker/profile': typeof WorkerProfileRoute
+  '/procurement/': typeof ProcurementIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/worker/': typeof WorkerIndexRoute
+  '/worker/task/$id': typeof WorkerTaskIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/activity'
+    | '/catalogue'
+    | '/settings'
+    | '/vendors'
+    | '/workers'
+    | '/procurement/new'
+    | '/projects/$id'
+    | '/tasks/$id'
+    | '/worker/history'
+    | '/worker/profile'
+    | '/procurement/'
+    | '/projects/'
+    | '/worker/'
+    | '/worker/task/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/activity'
+    | '/catalogue'
+    | '/settings'
+    | '/vendors'
+    | '/workers'
+    | '/procurement/new'
+    | '/projects/$id'
+    | '/tasks/$id'
+    | '/worker/history'
+    | '/worker/profile'
+    | '/procurement'
+    | '/projects'
+    | '/worker'
+    | '/worker/task/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/activity'
+    | '/catalogue'
+    | '/settings'
+    | '/vendors'
+    | '/workers'
+    | '/procurement/new'
+    | '/projects/$id'
+    | '/tasks/$id'
+    | '/worker/history'
+    | '/worker/profile'
+    | '/procurement/'
+    | '/projects/'
+    | '/worker/'
+    | '/worker/task/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
+  CatalogueRoute: typeof CatalogueRoute
+  SettingsRoute: typeof SettingsRoute
+  VendorsRoute: typeof VendorsRoute
+  WorkersRoute: typeof WorkersRoute
+  ProcurementNewRoute: typeof ProcurementNewRoute
+  ProjectsIdRoute: typeof ProjectsIdRoute
+  TasksIdRoute: typeof TasksIdRoute
+  WorkerHistoryRoute: typeof WorkerHistoryRoute
+  WorkerProfileRoute: typeof WorkerProfileRoute
+  ProcurementIndexRoute: typeof ProcurementIndexRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
+  WorkerIndexRoute: typeof WorkerIndexRoute
+  WorkerTaskIdRoute: typeof WorkerTaskIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +234,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalogue': {
+      id: '/catalogue'
+      path: '/catalogue'
+      fullPath: '/catalogue'
+      preLoaderRoute: typeof CatalogueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vendors': {
+      id: '/vendors'
+      path: '/vendors'
+      fullPath: '/vendors'
+      preLoaderRoute: typeof VendorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workers': {
+      id: '/workers'
+      path: '/workers'
+      fullPath: '/workers'
+      preLoaderRoute: typeof WorkersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/procurement/': {
+      id: '/procurement/'
+      path: '/procurement'
+      fullPath: '/procurement/'
+      preLoaderRoute: typeof ProcurementIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/procurement/new': {
+      id: '/procurement/new'
+      path: '/procurement/new'
+      fullPath: '/procurement/new'
+      preLoaderRoute: typeof ProcurementNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$id': {
+      id: '/projects/$id'
+      path: '/projects/$id'
+      fullPath: '/projects/$id'
+      preLoaderRoute: typeof ProjectsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/$id': {
+      id: '/tasks/$id'
+      path: '/tasks/$id'
+      fullPath: '/tasks/$id'
+      preLoaderRoute: typeof TasksIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/': {
+      id: '/worker/'
+      path: '/worker'
+      fullPath: '/worker/'
+      preLoaderRoute: typeof WorkerIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/history': {
+      id: '/worker/history'
+      path: '/worker/history'
+      fullPath: '/worker/history'
+      preLoaderRoute: typeof WorkerHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/profile': {
+      id: '/worker/profile'
+      path: '/worker/profile'
+      fullPath: '/worker/profile'
+      preLoaderRoute: typeof WorkerProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/task/$id': {
+      id: '/worker/task/$id'
+      path: '/worker/task/$id'
+      fullPath: '/worker/task/$id'
+      preLoaderRoute: typeof WorkerTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
+  CatalogueRoute: CatalogueRoute,
+  SettingsRoute: SettingsRoute,
+  VendorsRoute: VendorsRoute,
+  WorkersRoute: WorkersRoute,
+  ProcurementNewRoute: ProcurementNewRoute,
+  ProjectsIdRoute: ProjectsIdRoute,
+  TasksIdRoute: TasksIdRoute,
+  WorkerHistoryRoute: WorkerHistoryRoute,
+  WorkerProfileRoute: WorkerProfileRoute,
+  ProcurementIndexRoute: ProcurementIndexRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
+  WorkerIndexRoute: WorkerIndexRoute,
+  WorkerTaskIdRoute: WorkerTaskIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

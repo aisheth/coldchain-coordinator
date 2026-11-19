@@ -28,3 +28,8 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+- All app data goes through `src/lib/store.tsx` (React context persisted to localStorage) so a real backend can replace it in one place.
+- Material picker filtering lives as pure functions in `src/lib/procurement.ts` (tested); UI must not duplicate that logic.
+- Owner vs worker layout is chosen in `__root.tsx` by the `/worker` path prefix.
