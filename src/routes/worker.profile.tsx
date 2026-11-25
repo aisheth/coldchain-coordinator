@@ -1,29 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { Card, Initials, Field, selectCls } from "@/components/app/ui";
+import { Card, Initials } from "@/components/app/ui";
+import { PasswordForm } from "@/components/app/PasswordForm";
 import { useStore } from "@/lib/store";
 import { meta } from "@/lib/seo";
 
-export const Route = createFileRoute("/worker/profile")({ head: () => meta("Profile", "Your worker profile."), component: Profile });
+export const Route = createFileRoute("/worker/profile")({
+  head: () => meta("Profile", "Your live worker account and password settings."),
+  component: Profile,
+});
 
 function Profile() {
-  const { state, setCurrentWorker } = useStore();
-  const me = state.workers.find((w) => w.id === state.currentWorkerId);
-  const done = state.tasks.filter((t) => t.workerId === me?.id && t.status === "completed").length;
+  const { state, user } = useStore();
+  const done = state.tasks.filter(
+    (t) => t.workerId === user?.id && t.status === "completed",
+  ).length;
   return (
     <div className="space-y-4">
       <Card className="flex flex-col items-center p-6 text-center">
-        <Initials name={me?.name ?? "?"} className="h-16 w-16 text-lg" />
-        <p className="mt-3 text-lg font-semibold">{me?.name}</p>
-        <p className="text-sm text-muted-foreground">{me?.phone} · {me?.area}</p>
+        <Initials name={user?.name ?? "?"} className="h-16 w-16 text-lg" />
+        <p className="mt-3 text-lg font-semibold">{user?.name}</p>
+        <p className="text-sm text-muted-foreground">
+          @{user?.username}
+          {user?.phone ? ` · ${user.phone}` : ""}
+        </p>
         <p className="mt-3 text-sm">{done} tasks completed</p>
       </Card>
       <Card className="p-4">
-        <Field label="Preview as worker (prototype)">
-          <select className={`${selectCls} h-12 text-base`} value={state.currentWorkerId} onChange={(e) => { setCurrentWorker(e.target.value); toast.success("Switched worker"); }}>
-            {state.workers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-          </select>
-        </Field>
+        <h2 className="font-semibold">Change password</h2>
+        <PasswordForm />
       </Card>
     </div>
   );

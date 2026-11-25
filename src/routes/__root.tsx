@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  Navigate,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
@@ -16,6 +17,11 @@ import { StoreProvider } from "@/lib/store";
 import { OwnerShell, WorkerShell } from "@/components/app/Shells";
 import { Toaster } from "@/components/ui/sonner";
 import { useRouterState } from "@tanstack/react-router";
+import { Login } from "@/components/app/Login";
+import { ErrorState, LoadingState } from "@/components/app/DataState";
+import { PasswordForm } from "@/components/app/PasswordForm";
+import { Card } from "@/components/app/ui";
+import { useStore } from "@/lib/store";
 
 function NotFoundComponent() {
   return (
@@ -86,9 +92,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "ColdTrack — Procurement & Deployment" },
-      { name: "description", content: "Track cold storage procurement tasks, workers and deliveries." },
+      {
+        name: "description",
+        content: "Track cold storage procurement tasks, workers and deliveries.",
+      },
       { property: "og:title", content: "ColdTrack" },
-      { property: "og:description", content: "Track cold storage procurement tasks, workers and deliveries." },
+      {
+        property: "og:description",
+        content: "Track cold storage procurement tasks, workers and deliveries.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -100,7 +112,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -139,6 +154,27 @@ function RootComponent() {
 
 function Shell() {
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const { authStatus, dataLoading, error, user, refresh } = useStore();
+  if (authStatus === "loading") return <LoadingState label="Checking your session…" />;
+  if (authStatus === "unauthenticated" || !user) return <Login />;
+  if (user.must_change_password) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md p-6">
+          <h1 className="text-xl font-semibold">Change your password</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your account requires a new password before you can continue.
+          </p>
+          <PasswordForm />
+        </Card>
+      </main>
+    );
+  }
+  if (dataLoading) return <LoadingState />;
+  if (error) return <ErrorState message={error} onRetry={() => void refresh()} />;
+  if (user.role === "worker" && !path.startsWith("/worker"))
+    return <Navigate to="/worker" replace />;
+  if (user.role !== "worker" && path.startsWith("/worker")) return <Navigate to="/" replace />;
   const Wrap = path.startsWith("/worker") ? WorkerShell : OwnerShell;
   return (
     <Wrap>

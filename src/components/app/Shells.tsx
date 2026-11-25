@@ -1,6 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { Activity, Boxes, ClipboardList, FolderKanban, History, LayoutDashboard, ListChecks, Settings, Snowflake, Store, User, Users, Smartphone, Monitor } from "lucide-react";
+import {
+  Activity,
+  Boxes,
+  ClipboardList,
+  FolderKanban,
+  History,
+  LayoutDashboard,
+  ListChecks,
+  Settings,
+  Snowflake,
+  Store,
+  User,
+  Users,
+  LogOut,
+} from "lucide-react";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -18,38 +32,87 @@ const ownerNav = [
 function Brand({ light }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Snowflake className="h-4 w-4" /></span>
-      <span className={cn("font-display text-lg font-semibold", light ? "text-sidebar-accent-foreground" : "text-foreground")}>ColdTrack</span>
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+        <Snowflake className="h-4 w-4" />
+      </span>
+      <span
+        className={cn(
+          "font-display text-lg font-semibold",
+          light ? "text-sidebar-accent-foreground" : "text-foreground",
+        )}
+      >
+        ColdTrack
+      </span>
     </div>
   );
 }
 
 export function OwnerShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const active = (to: string) => (to === "/" ? path === "/" : path.startsWith(to) || (to === "/procurement" && path.startsWith("/tasks")));
+  const { user, logout } = useStore();
+  const active = (to: string) =>
+    to === "/"
+      ? path === "/"
+      : path.startsWith(to) || (to === "/procurement" && path.startsWith("/tasks"));
+  const signOut = () => {
+    void logout();
+  };
   return (
     <div className="flex min-h-screen">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar p-4 md:flex">
         <Brand light />
         <nav className="mt-8 flex-1 space-y-1">
           {ownerNav.map((n) => (
-            <Link key={n.to} to={n.to} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", active(n.to) && "bg-sidebar-accent text-sidebar-accent-foreground")}>
-              <n.icon className="h-4 w-4" />{n.label}
+            <Link
+              key={n.to}
+              to={n.to}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                active(n.to) && "bg-sidebar-accent text-sidebar-accent-foreground",
+              )}
+            >
+              <n.icon className="h-4 w-4" />
+              {n.label}
             </Link>
           ))}
         </nav>
-        <Link to="/worker" className="flex items-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent">
-          <Smartphone className="h-4 w-4" />Switch to worker app
-        </Link>
+        <div className="border-t border-sidebar-border pt-3">
+          <p className="truncate px-3 text-sm font-medium text-sidebar-accent-foreground">
+            {user?.name}
+          </p>
+          <p className="px-3 text-xs capitalize text-sidebar-foreground">{user?.role}</p>
+          <button
+            onClick={signOut}
+            className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b bg-card px-4 py-3 md:hidden">
           <Brand />
-          <Link to="/worker" className="text-sm font-medium text-primary">Worker app</Link>
+          <button
+            onClick={signOut}
+            className="flex items-center gap-1 text-sm font-medium text-primary"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 md:hidden">
           {ownerNav.map((n) => (
-            <Link key={n.to} to={n.to} className={cn("whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground", active(n.to) && "bg-secondary text-foreground")}>{n.label}</Link>
+            <Link
+              key={n.to}
+              to={n.to}
+              className={cn(
+                "whitespace-nowrap rounded-md px-3 py-1.5 text-sm text-muted-foreground",
+                active(n.to) && "bg-secondary text-foreground",
+              )}
+            >
+              {n.label}
+            </Link>
           ))}
         </nav>
         <main className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-8">{children}</main>
@@ -66,23 +129,42 @@ const workerNav = [
 
 export function WorkerShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const { state } = useStore();
-  const me = state.workers.find((w) => w.id === state.currentWorkerId);
+  const { user, logout } = useStore();
   return (
     <div className="min-h-screen bg-muted/40">
       <div className="mx-auto flex min-h-screen max-w-md flex-col bg-background shadow-[var(--shadow-card)]">
         <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-card px-4 py-3">
           <Brand />
-          <Link to="/" className="flex items-center gap-1 text-xs font-medium text-muted-foreground"><Monitor className="h-3.5 w-3.5" />Owner view</Link>
+          <button
+            onClick={() => void logout()}
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
         </header>
-        {me && <div className="bg-sidebar px-4 py-2 text-xs text-sidebar-foreground">Signed in as <span className="font-semibold text-sidebar-accent-foreground">{me.name}</span></div>}
+        <div className="bg-sidebar px-4 py-2 text-xs text-sidebar-foreground">
+          Signed in as{" "}
+          <span className="font-semibold text-sidebar-accent-foreground">{user?.name}</span>
+        </div>
         <main className="flex-1 p-4 pb-24">{children}</main>
         <nav className="fixed bottom-0 left-1/2 grid w-full max-w-md -translate-x-1/2 grid-cols-3 border-t bg-card">
           {workerNav.map((n) => {
-            const on = n.to === "/worker" ? path === "/worker" || path.startsWith("/worker/task") : path.startsWith(n.to);
+            const on =
+              n.to === "/worker"
+                ? path === "/worker" || path.startsWith("/worker/task")
+                : path.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to} className={cn("flex flex-col items-center gap-1 py-3 text-xs font-medium text-muted-foreground", on && "text-primary")}>
-                <n.icon className="h-5 w-5" />{n.label}
+              <Link
+                key={n.to}
+                to={n.to}
+                className={cn(
+                  "flex flex-col items-center gap-1 py-3 text-xs font-medium text-muted-foreground",
+                  on && "text-primary",
+                )}
+              >
+                <n.icon className="h-5 w-5" />
+                {n.label}
               </Link>
             );
           })}

@@ -21,6 +21,12 @@ npm i
 npm run dev
 ```
 
+## Live API configuration
+
+The app connects to `https://cold-chain-clin.onrender.com` by default. Set the public `VITE_API_BASE_URL` environment variable to use another FastAPI origin; resource paths are appended under `/api/v1`. See `.env.example`.
+
+Sign in with an account created in that backend. Access and refresh tokens are kept in tab-scoped browser session storage. Never add database credentials, `SECRET_KEY`, or other private values to `VITE_*` variables.
+
 ## Built with
 
 - TanStack Start
