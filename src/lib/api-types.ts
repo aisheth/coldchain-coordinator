@@ -69,6 +69,25 @@ export interface ApiItem {
   is_active: boolean;
   variants: ApiVariant[];
 }
+export interface ApiCategory {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
+export interface ApiSizeOption {
+  id: string;
+  label: string;
+  value: number | null;
+  uom_id: string | null;
+  is_active: boolean;
+}
+export interface ApiUom {
+  id: string;
+  code: string;
+  name: string;
+  symbol: string;
+  allows_decimal: boolean;
+}
 export interface ApiAttachment {
   id: string;
   filename: string;

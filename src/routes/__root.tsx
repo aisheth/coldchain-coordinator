@@ -22,6 +22,7 @@ import { ErrorState, LoadingState } from "@/components/app/DataState";
 import { PasswordForm } from "@/components/app/PasswordForm";
 import { Card } from "@/components/app/ui";
 import { useStore } from "@/lib/store";
+import { isWorkerPath } from "@/lib/navigation";
 
 function NotFoundComponent() {
   return (
@@ -172,10 +173,10 @@ function Shell() {
   }
   if (dataLoading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={() => void refresh()} />;
-  if (user.role === "worker" && !path.startsWith("/worker"))
-    return <Navigate to="/worker" replace />;
-  if (user.role !== "worker" && path.startsWith("/worker")) return <Navigate to="/" replace />;
-  const Wrap = path.startsWith("/worker") ? WorkerShell : OwnerShell;
+  const workerPath = isWorkerPath(path);
+  if (user.role === "worker" && !workerPath) return <Navigate to="/worker" replace />;
+  if (user.role !== "worker" && workerPath) return <Navigate to="/" replace />;
+  const Wrap = workerPath ? WorkerShell : OwnerShell;
   return (
     <Wrap>
       <Outlet />

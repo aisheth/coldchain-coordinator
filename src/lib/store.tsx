@@ -23,20 +23,26 @@ import {
   mapUser,
   mapVendor,
   mergeAssignmentVariants,
+  variantLabel,
   workerState,
 } from "./api-adapters";
 import type {
   ApiAssignment,
   ApiAssignmentSummary,
+  ApiCategory,
   ApiCustomer,
   ApiItem,
   ApiProject,
   ApiRequest,
+  ApiSizeOption,
+  ApiUom,
   ApiUser,
+  ApiVariant,
   ApiVendor,
   Page,
 } from "./api-types";
-import type { AppState, MaterialLine, Project, Task, Vendor, Worker } from "./types";
+import type { CatalogueItemDraft, CatalogueVariantDraft, UomDraft } from "./catalogue";
+import type { AppState, CatalogueItem, MaterialLine, Project, Task, Vendor, Worker } from "./types";
 
 export type AuthStatus = "loading" | "unauthenticated" | "authenticated";
 export type ProjectDraft = Omit<Project, "id" | "createdAt" | "ref" | "customerId" | "description">;
@@ -51,6 +57,11 @@ export interface OrgSettings {
   require_owner_approval: boolean;
   require_delivery_photo: boolean;
 }
+export interface CatalogueOptions {
+  categories: ApiCategory[];
+  sizeOptions: ApiSizeOption[];
+  uoms: ApiUom[];
+}
 
 interface Store {
   state: AppState;
@@ -59,6 +70,15 @@ interface Store {
   dataLoading: boolean;
   error: string | null;
   orgSettings: OrgSettings | null;
+  catalogueOptions: CatalogueOptions;
+  catalogueOptionsLoading: boolean;
+  catalogueOptionsError: string | null;
+  loadCatalogueOptions: () => Promise<void>;
+  addCatalogueItem: (draft: CatalogueItemDraft) => Promise<CatalogueItem>;
+  addCatalogueVariant: (itemId: string, draft: CatalogueVariantDraft) => Promise<void>;
+  addCatalogueCategory: (name: string) => Promise<ApiCategory>;
+  addCatalogueSizeOption: (label: string) => Promise<ApiSizeOption>;
+  addCatalogueUom: (draft: UomDraft) => Promise<ApiUom>;
   login: (identifier: string, password: string) => Promise<ApiUser>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -132,6 +152,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [dataLoading, setDataLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orgSettings, setOrgSettings] = useState<OrgSettings | null>(null);
+  const [catalogueOptions, setCatalogueOptions] = useState<CatalogueOptions>({
+    categories: [],
+    sizeOptions: [],
+    uoms: [],
+  });
+  const [catalogueOptionsLoading, setCatalogueOptionsLoading] = useState(false);
+  const [catalogueOptionsError, setCatalogueOptionsError] = useState<string | null>(null);
 
   const loadData = useCallback(async (account: ApiUser) => {
     setDataLoading(true);
@@ -189,6 +216,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loadCatalogueOptions = useCallback(async () => {
+    setCatalogueOptionsLoading(true);
+    setCatalogueOptionsError(null);
+    try {
+      const [categories, sizeOptions, uoms] = await Promise.all([
+        apiRequest<ApiCategory[]>("/item-categories"),
+        apiRequest<ApiSizeOption[]>("/size-options?active=true"),
+        apiRequest<ApiUom[]>("/uom"),
+      ]);
+      setCatalogueOptions({
+        categories: categories.filter((category) => category.is_active),
+        sizeOptions: sizeOptions.filter((size) => size.is_active),
+        uoms,
+      });
+    } catch (err) {
+      setCatalogueOptionsError(errorMessage(err));
+    } finally {
+      setCatalogueOptionsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     let active = true;
     async function restore() {
@@ -214,6 +262,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setState(emptyState);
       setOrgSettings(null);
+      setCatalogueOptions({ categories: [], sizeOptions: [], uoms: [] });
+      setCatalogueOptionsError(null);
       setAuthStatus("unauthenticated");
     };
     window.addEventListener("coldtrack:auth-expired", expired);
@@ -256,6 +306,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dataLoading,
       error,
       orgSettings,
+      catalogueOptions,
+      catalogueOptionsLoading,
+      catalogueOptionsError,
+      loadCatalogueOptions,
       login: async (identifier, password) => {
         await loginRequest(identifier, password);
         const me = await apiRequest<ApiUser>("/auth/me");
@@ -272,6 +326,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setState(emptyState);
           setOrgSettings(null);
+          setCatalogueOptions({ categories: [], sizeOptions: [], uoms: [] });
+          setCatalogueOptionsError(null);
           setError(null);
           setAuthStatus("unauthenticated");
         }
@@ -434,6 +490,98 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setState((current) => ({ ...current, vendors: [...current.vendors, vendor] }));
         return vendor;
       },
+      addCatalogueItem: async (draft) => {
+        const created = await apiRequest<ApiItem>("/items", {
+          method: "POST",
+          body: {
+            name: draft.name.trim(),
+            category_id: draft.categoryId || null,
+            description: draft.description.trim() || null,
+          },
+        });
+        const item = mapCatalogue([created])[0];
+        if (!item) throw new Error("The API returned an invalid catalogue item.");
+        setState((current) => ({
+          ...current,
+          catalogue: current.catalogue.some((entry) => entry.id === item.id)
+            ? current.catalogue.map((entry) => (entry.id === item.id ? item : entry))
+            : [...current.catalogue, item],
+        }));
+        return item;
+      },
+      addCatalogueVariant: async (itemId, draft) => {
+        const created = await apiRequest<ApiVariant>(
+          `/items/${encodeURIComponent(itemId)}/variants`,
+          {
+            method: "POST",
+            body: {
+              size_option_id: draft.sizeOptionId || null,
+              uom_id: draft.uomId,
+              sku: draft.sku.trim() || null,
+              description: draft.description.trim() || null,
+              attributes: {},
+            },
+          },
+        );
+        setState((current) => ({
+          ...current,
+          catalogue: current.catalogue.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  unit: item.variants.length ? item.unit : created.uom_symbol || created.uom_code,
+                  variants: item.variants.some((variant) => variant.id === created.id)
+                    ? item.variants
+                    : [...item.variants, { id: created.id, label: variantLabel(created) }],
+                }
+              : item,
+          ),
+        }));
+      },
+      addCatalogueCategory: async (name) => {
+        const created = await apiRequest<ApiCategory>("/item-categories", {
+          method: "POST",
+          body: { name: name.trim() },
+        });
+        setCatalogueOptions((current) => ({
+          ...current,
+          categories: current.categories.some((category) => category.id === created.id)
+            ? current.categories
+            : [...current.categories, created],
+        }));
+        return created;
+      },
+      addCatalogueSizeOption: async (label) => {
+        const created = await apiRequest<ApiSizeOption>("/size-options", {
+          method: "POST",
+          body: { label: label.trim() },
+        });
+        setCatalogueOptions((current) => ({
+          ...current,
+          sizeOptions: current.sizeOptions.some((size) => size.id === created.id)
+            ? current.sizeOptions
+            : [...current.sizeOptions, created],
+        }));
+        return created;
+      },
+      addCatalogueUom: async (draft) => {
+        const created = await apiRequest<ApiUom>("/uom", {
+          method: "POST",
+          body: {
+            code: draft.code.trim(),
+            name: draft.name.trim(),
+            symbol: draft.symbol.trim(),
+            allows_decimal: draft.allowsDecimal,
+          },
+        });
+        setCatalogueOptions((current) => ({
+          ...current,
+          uoms: current.uoms.some((uom) => uom.id === created.id)
+            ? current.uoms
+            : [...current.uoms, created],
+        }));
+        return created;
+      },
       transitionTask: async (id, status, note, photo) => {
         const attachmentId = await withOptionalPhoto(photo);
         try {
@@ -544,6 +692,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       dataLoading,
       error,
       orgSettings,
+      catalogueOptions,
+      catalogueOptionsLoading,
+      catalogueOptionsError,
+      loadCatalogueOptions,
       loadData,
       refresh,
       replaceTask,
