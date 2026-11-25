@@ -47,9 +47,12 @@ export function mapUser(user: ApiUser): Worker {
     id: user.id,
     username: user.username,
     name: user.name,
+    email: user.email ?? "",
     phone: user.phone ?? "",
     area: "",
     role: user.role,
+    isActive: user.is_active,
+    mustChangePassword: user.must_change_password,
   };
 }
 

@@ -52,9 +52,12 @@ export interface Worker {
   id: string;
   username: string;
   name: string;
+  email: string;
   phone: string;
   area: string;
   role: "owner" | "admin" | "worker";
+  isActive: boolean;
+  mustChangePassword: boolean;
 }
 export interface Vendor {
   id: string;

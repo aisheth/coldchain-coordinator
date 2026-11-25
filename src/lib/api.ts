@@ -185,6 +185,16 @@ export async function logoutRequest() {
   }
 }
 
+export async function changePasswordRequest(current_password: string, new_password: string) {
+  const tokens = await apiRequest<TokenOut>("/auth/change-password", {
+    method: "POST",
+    body: { current_password, new_password },
+  });
+  // The API rotates credentials after a password change; never keep using revoked tokens.
+  saveSession(tokens);
+  return tokens;
+}
+
 export async function uploadAttachment(file: File) {
   const form = new FormData();
   form.append("file", file);

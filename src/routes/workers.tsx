@@ -5,7 +5,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { LoaderCircle, Phone, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Card, PageHeader, TaskStatusPill, Initials, Field } from "@/components/app/ui";
+import { Card, PageHeader, TaskStatusPill, Initials, Field, Pill } from "@/components/app/ui";
+import { WorkerAccountActions } from "@/components/app/WorkerAccountActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStore, timeAgo } from "@/lib/store";
@@ -57,13 +58,22 @@ function Workers() {
             .sort((a, b) => b.at.localeCompare(a.at))[0];
           return (
             <Card key={w.id} className="p-5">
-              <div className="flex items-center gap-3">
-                <Initials name={w.name} className="h-10 w-10" />
-                <div>
-                  <p className="font-semibold">{w.name}</p>
-                  <p className="text-xs text-muted-foreground">@{w.username}</p>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Initials name={w.name} className="h-10 w-10" />
+                  <div>
+                    <p className="font-semibold">{w.name}</p>
+                    <p className="text-xs text-muted-foreground">@{w.username}</p>
+                  </div>
                 </div>
+                <Pill tone={w.isActive ? "success" : "neutral"}>
+                  {w.isActive ? "Active" : "Inactive"}
+                </Pill>
               </div>
+              {w.email && <p className="mt-3 break-all text-sm text-muted-foreground">{w.email}</p>}
+              {w.mustChangePassword && (
+                <p className="mt-2 text-xs text-warning">Password change required at next login</p>
+              )}
               {w.phone && (
                 <a
                   href={`tel:${w.phone}`}
@@ -89,6 +99,9 @@ function Workers() {
                 Last update: {last ? timeAgo(last.at) : "—"} ·{" "}
                 {tasks.filter((t) => t.status === "completed").length} completed
               </p>
+              <div className="mt-4 border-t pt-3">
+                <WorkerAccountActions worker={w} />
+              </div>
             </Card>
           );
         })}

@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { apiRequest, ApiError, loginRequest, saveSession } from "./api";
+import {
+  apiRequest,
+  ApiError,
+  changePasswordRequest,
+  getAccessToken,
+  getRefreshToken,
+  loginRequest,
+  saveSession,
+} from "./api";
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -84,6 +92,25 @@ describe("live API client", () => {
     );
     const retryHeaders = new Headers(fetchMock.mock.calls[2]?.[1]?.headers);
     expect(retryHeaders.get("Authorization")).toBe("Bearer access-new");
+  });
+
+  it("replaces both session tokens after a forced or voluntary password change", async () => {
+    saveSession({ access_token: "old-access", refresh_token: "old-refresh" });
+    const fetchMock = vi.fn().mockResolvedValue(
+      json({
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+        must_change_password: false,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    await changePasswordRequest("current-test-only", "new-test-only");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      current_password: "current-test-only",
+      new_password: "new-test-only",
+    });
+    expect(getAccessToken()).toBe("new-access");
+    expect(getRefreshToken()).toBe("new-refresh");
   });
 
   it("turns network/CORS failures into a readable error", async () => {

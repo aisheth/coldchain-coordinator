@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   apiRequest,
+  changePasswordRequest,
   clearSession,
   errorMessage,
   hasSession,
@@ -52,6 +53,12 @@ export interface WorkerDraft {
   username: string;
   password: string;
   phone: string;
+}
+export interface WorkerUpdate {
+  name: string;
+  email: string;
+  phone: string;
+  isActive: boolean;
 }
 export interface OrgSettings {
   organization_name: string;
@@ -103,6 +110,8 @@ interface Store {
     onRequestCreated?: (request: { id: string; code: string }) => void;
   }) => Promise<Task>;
   addWorker: (w: WorkerDraft) => Promise<void>;
+  updateWorker: (id: string, patch: WorkerUpdate) => Promise<void>;
+  resetWorkerPassword: (id: string) => Promise<string>;
   addVendor: (v: Omit<Vendor, "id" | "specialty">) => Promise<Vendor>;
   transitionTask: (id: string, status: string, note?: string, photo?: File) => Promise<void>;
   holdTask: (id: string, reason: string) => Promise<void>;
@@ -590,6 +599,36 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
         setState((current) => ({ ...current, workers: [...current.workers, mapUser(created)] }));
       },
+      updateWorker: async (id, patch) => {
+        const target = state.workers.find((worker) => worker.id === id && worker.role === "worker");
+        if (!user || user.role === "worker" || !target)
+          throw new Error("Your role cannot manage this worker account.");
+        const updated = await apiRequest<ApiUser>(`/users/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: {
+            name: patch.name.trim(),
+            email: patch.email.trim() || null,
+            phone: patch.phone.trim() || null,
+            is_active: patch.isActive,
+          },
+        });
+        setState((current) => ({
+          ...current,
+          workers: current.workers.map((worker) => (worker.id === id ? mapUser(updated) : worker)),
+        }));
+      },
+      resetWorkerPassword: async (id) => {
+        const target = state.workers.find((worker) => worker.id === id && worker.role === "worker");
+        if (!user || user.role === "worker" || !target)
+          throw new Error("Your role cannot reset this worker's password.");
+        const result = await apiRequest<{ temporary_password: string }>(
+          `/users/${encodeURIComponent(id)}/reset-password`,
+          { method: "POST" },
+        );
+        if (!result.temporary_password)
+          throw new Error("The API confirmed the request but returned no temporary password.");
+        return result.temporary_password;
+      },
       addVendor: async (draft) => {
         const created = await apiRequest<ApiVendor>("/vendors", {
           method: "POST",
@@ -790,10 +829,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await reloadTask(taskId);
       },
       changePassword: async (current_password, new_password) => {
-        await apiRequest("/auth/change-password", {
-          method: "POST",
-          body: { current_password, new_password },
-        });
+        await changePasswordRequest(current_password, new_password);
         if (user) setUser({ ...user, must_change_password: false });
       },
       updateOrgSettings: async (patch) => {

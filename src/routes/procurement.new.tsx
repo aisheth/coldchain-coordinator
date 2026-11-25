@@ -58,12 +58,13 @@ function NewTask() {
   const [due, setDue] = draftField(draft, "due");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const selectedWorker = state.workers.find((worker) => worker.id === workerId);
 
   const canAssign = Boolean(
     !draft.data.createdRequest &&
     finalized &&
     projectId &&
-    workerId &&
+    selectedWorker?.isActive &&
     site &&
     due &&
     vendorId &&
@@ -185,18 +186,26 @@ function NewTask() {
                 onChange={(e) => setWorkerId(e.target.value)}
               >
                 <option value="">Select worker</option>
-                {state.workers.map((w) => {
-                  const n = state.tasks.filter(
-                    (t) => t.workerId === w.id && !["completed", "cancelled"].includes(t.status),
-                  ).length;
-                  return (
-                    <option key={w.id} value={w.id}>
-                      {w.name} · {n} active
-                    </option>
-                  );
-                })}
+                {state.workers
+                  .filter((w) => w.isActive)
+                  .map((w) => {
+                    const n = state.tasks.filter(
+                      (t) => t.workerId === w.id && !["completed", "cancelled"].includes(t.status),
+                    ).length;
+                    return (
+                      <option key={w.id} value={w.id}>
+                        {w.name} · {n} active
+                      </option>
+                    );
+                  })}
               </select>
             </Field>
+            {workerId && !selectedWorker?.isActive && (
+              <p role="alert" className="text-sm text-danger md:col-span-2">
+                The saved worker is inactive or unavailable. Choose an active worker before
+                assigning this task.
+              </p>
+            )}
             <Field label="Vendor">
               <select
                 className={selectCls}
