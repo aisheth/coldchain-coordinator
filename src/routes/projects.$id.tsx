@@ -110,18 +110,17 @@ function ProjectPage() {
           )}
         </Card>
       </div>
-      {edit && (
-        <ProjectForm
-          open={edit}
-          onOpenChange={setEdit}
-          initial={p}
-          onSave={async (d) => {
-            await updateProject(p.id, d);
-            setEdit(false);
-            toast.success("Project updated");
-          }}
-        />
-      )}
+      <ProjectForm
+        open={edit}
+        onOpenChange={setEdit}
+        initial={p}
+        entityId={p.id}
+        onSave={async (d) => {
+          await updateProject(p.id, d);
+          setEdit(false);
+          toast.success("Project updated");
+        }}
+      />
     </>
   );
 }

@@ -1,3 +1,5 @@
+import { useDraft, draftField } from "@/lib/drafts";
+import { DraftNotice } from "@/components/app/DraftNotice";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowLeft, MapPin, Phone, Store, Calendar, User, LoaderCircle } from "lucide-react";
@@ -22,10 +24,12 @@ export const Route = createFileRoute("/tasks/$id")({
 
 function TaskPage() {
   const { id } = Route.useParams();
-  const { state, transitionTask, resolveIssue } = useStore();
-  const [note, setNote] = useState("");
-  const [st, setSt] = useState("");
-  const [resolution, setResolution] = useState("");
+  const { state, user, transitionTask, resolveIssue } = useStore();
+  const draft = useDraft(user, `owner-task:${id}:status`, { note: "", st: "" });
+  const issueDraft = useDraft(user, `owner-task:${id}:resolution`, { resolution: "" });
+  const [note, setNote] = draftField(draft, "note");
+  const [st, setSt] = draftField(draft, "st");
+  const [resolution, setResolution] = draftField(issueDraft, "resolution");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const t = state.tasks.find((x) => x.id === id);
@@ -47,14 +51,12 @@ function TaskPage() {
     (issue) => issue.status !== "resolved" && issue.status !== "closed",
   );
 
-  async function run(action: () => Promise<void>, success: string) {
+  async function run(action: () => Promise<void>, success: string, clear: () => void) {
     setBusy(true);
     setError("");
     try {
       await action();
-      setNote("");
-      setSt("");
-      setResolution("");
+      clear();
       toast.success(success);
     } catch (err) {
       setError(errorMessage(err));
@@ -134,6 +136,7 @@ function TaskPage() {
           {openIssues.length > 0 && (
             <Card className="space-y-4 border-danger/30 p-5">
               <h2 className="font-semibold text-danger">Open issues</h2>
+              <DraftNotice draft={issueDraft} />
               {openIssues.map((issue) => (
                 <div key={issue.id} className="rounded-lg bg-danger-soft p-3 text-sm">
                   <p>{issue.description}</p>
@@ -142,12 +145,17 @@ function TaskPage() {
                     <Input
                       placeholder="Resolution"
                       value={resolution}
+                      disabled={issueDraft.pending || busy}
                       onChange={(e) => setResolution(e.target.value)}
                     />
                     <Button
-                      disabled={!resolution || busy}
+                      disabled={!resolution || busy || issueDraft.pending}
                       onClick={() =>
-                        void run(() => resolveIssue(t.id, issue.id, resolution), "Issue resolved")
+                        void run(
+                          () => resolveIssue(t.id, issue.id, resolution),
+                          "Issue resolved",
+                          issueDraft.clear,
+                        )
                       }
                     >
                       Resolve
@@ -212,7 +220,13 @@ function TaskPage() {
           )}
           <Card className="space-y-3 p-5">
             <h2 className="font-semibold">Owner action</h2>
-            <select className={selectCls} value={st} onChange={(e) => setSt(e.target.value)}>
+            <DraftNotice draft={draft} />
+            <select
+              disabled={draft.pending || busy}
+              className={selectCls}
+              value={st}
+              onChange={(e) => setSt(e.target.value)}
+            >
               <option value="">Choose an allowed status update</option>
               {t.allowedTransitions.map((status) => (
                 <option key={status} value={status}>
@@ -222,6 +236,7 @@ function TaskPage() {
             </select>
             <Textarea
               rows={2}
+              disabled={draft.pending || busy}
               placeholder="Note with this status update"
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -231,8 +246,10 @@ function TaskPage() {
             </p>
             <Button
               className="w-full"
-              disabled={!st || busy || !t.allowedTransitions.length}
-              onClick={() => void run(() => transitionTask(t.id, st, note), "Task updated")}
+              disabled={!st || busy || draft.pending || !t.allowedTransitions.includes(st)}
+              onClick={() =>
+                void run(() => transitionTask(t.id, st, note), "Task updated", draft.clear)
+              }
             >
               {busy && <LoaderCircle className="h-4 w-4 animate-spin" />}Post status update
             </Button>

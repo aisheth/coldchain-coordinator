@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, Field } from "./ui";
 import { errorMessage } from "@/lib/api";
+import { signInDestination } from "@/lib/navigation";
 import { useStore } from "@/lib/store";
 
 export function Login() {
@@ -21,7 +22,7 @@ export function Login() {
     setError("");
     try {
       const user = await login(identifier.trim(), password);
-      await navigate({ to: user.role === "worker" ? "/worker" : "/", replace: true });
+      await navigate({ to: signInDestination(user.role), replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

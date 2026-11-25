@@ -1,3 +1,5 @@
+import { useDraft, draftField } from "@/lib/drafts";
+import { DraftNotice } from "@/components/app/DraftNotice";
 import { useState, type FormEvent } from "react";
 import { LoaderCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -34,12 +36,23 @@ export function AddItemDialog({
   onClose: () => void;
   onCreated: (item: CatalogueItem) => void;
 }) {
-  const { catalogueOptions, catalogueOptionsLoading, addCatalogueCategory, addCatalogueItem } =
-    useStore();
-  const [name, setName] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [description, setDescription] = useState("");
+  const {
+    user,
+    catalogueOptions,
+    catalogueOptionsLoading,
+    addCatalogueCategory,
+    addCatalogueItem,
+  } = useStore();
+  const draft = useDraft(user, "catalogue:item:new", {
+    name: "",
+    categoryId: "",
+    categoryName: "",
+    description: "",
+  });
+  const [name, setName] = draftField(draft, "name");
+  const [categoryId, setCategoryId] = draftField(draft, "categoryId");
+  const [categoryName, setCategoryName] = draftField(draft, "categoryName");
+  const [description, setDescription] = draftField(draft, "description");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -69,6 +82,7 @@ export function AddItemDialog({
         categoryId: resolvedCategoryId === NEW_OPTION ? "" : resolvedCategoryId,
         description,
       });
+      draft.clear();
       toast.success(`${item.name} added to the catalogue`);
       onCreated(item);
     } catch (err) {
@@ -89,69 +103,72 @@ export function AddItemDialog({
             Create the item first, then add one variant for each size and unit.
           </DialogDescription>
         </DialogHeader>
+        <DraftNotice draft={draft} />
         <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-          <Field label="Item name">
-            <Input
-              autoFocus
-              maxLength={200}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="e.g. Refrigeration pipe"
-            />
-          </Field>
-          <Field label="Category">
-            <select
-              aria-label="Category"
-              className={selectCls}
-              value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-              disabled={catalogueOptionsLoading || busy}
-            >
-              <option value="">Uncategorised</option>
-              {catalogueOptions.categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-              <option value={NEW_OPTION}>+ Create a new category</option>
-            </select>
-          </Field>
-          {categoryId === NEW_OPTION && (
-            <Field label="New category name">
+          <fieldset disabled={draft.pending || busy} className="space-y-4">
+            <Field label="Item name">
               <Input
-                maxLength={100}
-                value={categoryName}
-                onChange={(event) => setCategoryName(event.target.value)}
-                placeholder="e.g. Refrigeration"
+                autoFocus
+                maxLength={200}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="e.g. Refrigeration pipe"
               />
             </Field>
-          )}
-          <Field label="Description (optional)">
-            <Textarea
-              rows={3}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="What this material is used for"
-            />
-          </Field>
-          {error && (
-            <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
-              {error}
-            </p>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={busy || catalogueOptionsLoading}>
-              {busy ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-              {busy ? "Saving item…" : "Save item & add variant"}
-            </Button>
-          </DialogFooter>
+            <Field label="Category">
+              <select
+                aria-label="Category"
+                className={selectCls}
+                value={categoryId}
+                onChange={(event) => setCategoryId(event.target.value)}
+                disabled={catalogueOptionsLoading || busy}
+              >
+                <option value="">Uncategorised</option>
+                {catalogueOptions.categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+                <option value={NEW_OPTION}>+ Create a new category</option>
+              </select>
+            </Field>
+            {categoryId === NEW_OPTION && (
+              <Field label="New category name">
+                <Input
+                  maxLength={100}
+                  value={categoryName}
+                  onChange={(event) => setCategoryName(event.target.value)}
+                  placeholder="e.g. Refrigeration"
+                />
+              </Field>
+            )}
+            <Field label="Description (optional)">
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="What this material is used for"
+              />
+            </Field>
+            {error && (
+              <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
+                {error}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={busy || catalogueOptionsLoading}>
+                {busy ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {busy ? "Saving item…" : "Save item & add variant"}
+              </Button>
+            </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>
@@ -160,6 +177,7 @@ export function AddItemDialog({
 
 export function AddVariantDialog({ item, onClose }: { item: CatalogueItem; onClose: () => void }) {
   const {
+    user,
     catalogueOptions,
     catalogueOptionsLoading,
     catalogueOptionsError,
@@ -168,12 +186,20 @@ export function AddVariantDialog({ item, onClose }: { item: CatalogueItem; onClo
     addCatalogueUom,
     addCatalogueVariant,
   } = useStore();
-  const [sizeOptionId, setSizeOptionId] = useState("");
-  const [sizeLabel, setSizeLabel] = useState("");
-  const [uomId, setUomId] = useState(catalogueOptions.uoms[0]?.id ?? NEW_OPTION);
-  const [newUom, setNewUom] = useState(blankUom);
-  const [sku, setSku] = useState("");
-  const [description, setDescription] = useState("");
+  const draft = useDraft(user, `catalogue:variant:${item.id}`, {
+    sizeOptionId: "",
+    sizeLabel: "",
+    uomId: catalogueOptions.uoms[0]?.id ?? NEW_OPTION,
+    newUom: blankUom,
+    sku: "",
+    description: "",
+  });
+  const [sizeOptionId, setSizeOptionId] = draftField(draft, "sizeOptionId");
+  const [sizeLabel, setSizeLabel] = draftField(draft, "sizeLabel");
+  const [uomId, setUomId] = draftField(draft, "uomId");
+  const [newUom, setNewUom] = draftField(draft, "newUom");
+  const [sku, setSku] = draftField(draft, "sku");
+  const [description, setDescription] = draftField(draft, "description");
   const [addedCount, setAddedCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -220,10 +246,7 @@ export function AddVariantDialog({ item, onClose }: { item: CatalogueItem; onClo
         description,
       });
       setAddedCount((count) => count + 1);
-      setSizeOptionId("");
-      setSizeLabel("");
-      setSku("");
-      setDescription("");
+      draft.clear();
       toast.success(`Variant added to ${item.name}`);
     } catch (err) {
       setError(
@@ -260,133 +283,136 @@ export function AddVariantDialog({ item, onClose }: { item: CatalogueItem; onClo
             </Button>
           </div>
         )}
+        <DraftNotice draft={draft} />
         <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-          <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Size / specification">
-              <select
-                aria-label="Size / specification"
-                className={selectCls}
-                value={sizeOptionId}
-                onChange={(event) => setSizeOptionId(event.target.value)}
-                disabled={catalogueOptionsLoading || busy}
-              >
-                <option value="">Standard — no size</option>
-                {catalogueOptions.sizeOptions.map((size) => (
-                  <option key={size.id} value={size.id}>
-                    {size.label}
-                  </option>
-                ))}
-                <option value={NEW_OPTION}>+ Create a new size</option>
-              </select>
-            </Field>
-            <Field label="Unit of measurement">
-              <select
-                aria-label="Unit of measurement"
-                className={selectCls}
-                value={uomId}
-                onChange={(event) => setUomId(event.target.value)}
-                disabled={catalogueOptionsLoading || busy}
-              >
-                <option value="">Select a unit</option>
-                {catalogueOptions.uoms.map((uom) => (
-                  <option key={uom.id} value={uom.id}>
-                    {uom.name} ({uom.symbol})
-                  </option>
-                ))}
-                <option value={NEW_OPTION}>+ Create a new unit</option>
-              </select>
-            </Field>
-          </div>
-          {sizeOptionId === NEW_OPTION && (
-            <Field label="New size label">
+          <fieldset disabled={draft.pending || busy} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Size / specification">
+                <select
+                  aria-label="Size / specification"
+                  className={selectCls}
+                  value={sizeOptionId}
+                  onChange={(event) => setSizeOptionId(event.target.value)}
+                  disabled={catalogueOptionsLoading || busy}
+                >
+                  <option value="">Standard — no size</option>
+                  {catalogueOptions.sizeOptions.map((size) => (
+                    <option key={size.id} value={size.id}>
+                      {size.label}
+                    </option>
+                  ))}
+                  <option value={NEW_OPTION}>+ Create a new size</option>
+                </select>
+              </Field>
+              <Field label="Unit of measurement">
+                <select
+                  aria-label="Unit of measurement"
+                  className={selectCls}
+                  value={uomId}
+                  onChange={(event) => setUomId(event.target.value)}
+                  disabled={catalogueOptionsLoading || busy}
+                >
+                  <option value="">Select a unit</option>
+                  {catalogueOptions.uoms.map((uom) => (
+                    <option key={uom.id} value={uom.id}>
+                      {uom.name} ({uom.symbol})
+                    </option>
+                  ))}
+                  <option value={NEW_OPTION}>+ Create a new unit</option>
+                </select>
+              </Field>
+            </div>
+            {sizeOptionId === NEW_OPTION && (
+              <Field label="New size label">
+                <Input
+                  maxLength={60}
+                  value={sizeLabel}
+                  onChange={(event) => setSizeLabel(event.target.value)}
+                  placeholder="e.g. 1 metre or 10 mm"
+                />
+              </Field>
+            )}
+            {uomId === NEW_OPTION && (
+              <div className="space-y-3 rounded-lg border p-4">
+                <p className="text-sm font-medium">New unit of measurement</p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <Field label="Code">
+                    <Input
+                      maxLength={30}
+                      value={newUom.code}
+                      onChange={(event) => setNewUom({ ...newUom, code: event.target.value })}
+                      placeholder="MTR"
+                    />
+                  </Field>
+                  <Field label="Name">
+                    <Input
+                      value={newUom.name}
+                      onChange={(event) => setNewUom({ ...newUom, name: event.target.value })}
+                      placeholder="Metre"
+                    />
+                  </Field>
+                  <Field label="Symbol">
+                    <Input
+                      maxLength={15}
+                      value={newUom.symbol}
+                      onChange={(event) => setNewUom({ ...newUom, symbol: event.target.value })}
+                      placeholder="m"
+                    />
+                  </Field>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={newUom.allowsDecimal}
+                    onChange={(event) =>
+                      setNewUom({ ...newUom, allowsDecimal: event.target.checked })
+                    }
+                  />
+                  Allow decimal quantities
+                </label>
+              </div>
+            )}
+            <Field label="SKU (optional)">
               <Input
                 maxLength={60}
-                value={sizeLabel}
-                onChange={(event) => setSizeLabel(event.target.value)}
-                placeholder="e.g. 1 metre or 10 mm"
+                value={sku}
+                onChange={(event) => setSku(event.target.value)}
+                placeholder="Supplier or internal SKU"
               />
             </Field>
-          )}
-          {uomId === NEW_OPTION && (
-            <div className="space-y-3 rounded-lg border p-4">
-              <p className="text-sm font-medium">New unit of measurement</p>
-              <div className="grid gap-3 md:grid-cols-3">
-                <Field label="Code">
-                  <Input
-                    maxLength={30}
-                    value={newUom.code}
-                    onChange={(event) => setNewUom({ ...newUom, code: event.target.value })}
-                    placeholder="MTR"
-                  />
-                </Field>
-                <Field label="Name">
-                  <Input
-                    value={newUom.name}
-                    onChange={(event) => setNewUom({ ...newUom, name: event.target.value })}
-                    placeholder="Metre"
-                  />
-                </Field>
-                <Field label="Symbol">
-                  <Input
-                    maxLength={15}
-                    value={newUom.symbol}
-                    onChange={(event) => setNewUom({ ...newUom, symbol: event.target.value })}
-                    placeholder="m"
-                  />
-                </Field>
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-primary"
-                  checked={newUom.allowsDecimal}
-                  onChange={(event) =>
-                    setNewUom({ ...newUom, allowsDecimal: event.target.checked })
-                  }
-                />
-                Allow decimal quantities
-              </label>
-            </div>
-          )}
-          <Field label="SKU (optional)">
-            <Input
-              maxLength={60}
-              value={sku}
-              onChange={(event) => setSku(event.target.value)}
-              placeholder="Supplier or internal SKU"
-            />
-          </Field>
-          <Field label="Variant description (optional)">
-            <Textarea
-              rows={2}
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-          </Field>
-          {addedCount > 0 && !error && (
-            <p className="rounded-lg bg-success-soft p-3 text-sm text-success" aria-live="polite">
-              {addedCount} variant{addedCount === 1 ? "" : "s"} added. You can add another or close
-              this window.
-            </p>
-          )}
-          {error && (
-            <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
-              {error}
-            </p>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
-              Done
-            </Button>
-            <Button type="submit" disabled={busy || catalogueOptionsLoading}>
-              {busy ? (
-                <LoaderCircle className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-              {busy ? "Saving variant…" : addedCount ? "Add another variant" : "Add variant"}
-            </Button>
-          </DialogFooter>
+            <Field label="Variant description (optional)">
+              <Textarea
+                rows={2}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </Field>
+            {addedCount > 0 && !error && (
+              <p className="rounded-lg bg-success-soft p-3 text-sm text-success" aria-live="polite">
+                {addedCount} variant{addedCount === 1 ? "" : "s"} added. You can add another or
+                close this window.
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
+                {error}
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+                Done
+              </Button>
+              <Button type="submit" disabled={busy || catalogueOptionsLoading}>
+                {busy ? (
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {busy ? "Saving variant…" : addedCount ? "Add another variant" : "Add variant"}
+              </Button>
+            </DialogFooter>
+          </fieldset>
         </form>
       </DialogContent>
     </Dialog>

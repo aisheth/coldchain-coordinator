@@ -1,3 +1,4 @@
+import { ImportLink } from "@/components/app/ImportLink";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Boxes, LoaderCircle, Plus, RefreshCw } from "lucide-react";
@@ -31,10 +32,13 @@ function Catalogue() {
         title="Item catalogue"
         subtitle={`${state.catalogue.length} items across ${cats.length} categories`}
         actions={
-          <Button onClick={() => setAddItemOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Add item
-          </Button>
+          <div className="flex gap-2">
+            <ImportLink area="items" />
+            <Button onClick={() => setAddItemOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Add item
+            </Button>
+          </div>
         }
       />
 

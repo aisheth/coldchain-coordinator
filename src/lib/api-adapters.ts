@@ -191,6 +191,7 @@ export function workerState(
   assignments: ApiAssignment[],
   vendors: ApiVendor[],
 ): Pick<AppState, "projects" | "workers" | "vendors" | "catalogue" | "tasks" | "currentWorkerId"> {
+  assignments = assignments.filter((assignment) => assignment.worker_id === user.id);
   const tasks = assignments.map(mapAssignment);
   const projects: Project[] = [...new Map(assignments.map((a) => [a.project_id, a])).values()].map(
     (a) => ({

@@ -41,6 +41,7 @@ import type {
   ApiVendor,
   Page,
 } from "./api-types";
+import { normalize, type ImportContext, type ImportKind, type ImportRow } from "./master-import";
 import type { CatalogueItemDraft, CatalogueVariantDraft, UomDraft } from "./catalogue";
 import type { AppState, CatalogueItem, MaterialLine, Project, Task, Vendor, Worker } from "./types";
 
@@ -79,9 +80,16 @@ interface Store {
   addCatalogueCategory: (name: string) => Promise<ApiCategory>;
   addCatalogueSizeOption: (label: string) => Promise<ApiSizeOption>;
   addCatalogueUom: (draft: UomDraft) => Promise<ApiUom>;
+  loadImportContext: () => Promise<ImportContext>;
+  importMasterRow: (
+    kind: ImportKind,
+    row: ImportRow,
+    context: ImportContext,
+    temporaryPassword: string,
+  ) => Promise<void>;
   login: (identifier: string, password: string) => Promise<ApiUser>;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  refresh: (background?: boolean) => Promise<void>;
   addProject: (p: ProjectDraft) => Promise<Project>;
   updateProject: (id: string, patch: Partial<ProjectDraft>) => Promise<void>;
   createTask: (t: {
@@ -92,6 +100,7 @@ interface Store {
     instructions: string;
     deliverySite: string;
     dueDate: string;
+    onRequestCreated?: (request: { id: string; code: string }) => void;
   }) => Promise<Task>;
   addWorker: (w: WorkerDraft) => Promise<void>;
   addVendor: (v: Omit<Vendor, "id" | "specialty">) => Promise<Vendor>;
@@ -160,9 +169,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [catalogueOptionsLoading, setCatalogueOptionsLoading] = useState(false);
   const [catalogueOptionsError, setCatalogueOptionsError] = useState<string | null>(null);
 
-  const loadData = useCallback(async (account: ApiUser) => {
-    setDataLoading(true);
-    setError(null);
+  const loadData = useCallback(async (account: ApiUser, background = false) => {
+    if (!background) {
+      setDataLoading(true);
+      setError(null);
+    }
     try {
       if (account.role === "worker") {
         const [summaries, vendors] = await Promise.all([
@@ -172,7 +183,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             throw err;
           }),
         ]);
-        const assignments = await assignmentDetails(summaries);
+        const assignments = await assignmentDetails(
+          summaries.filter((row) => row.worker_id === account.id),
+        );
         setState((current) => ({
           ...current,
           ...workerState(account, assignments, vendors),
@@ -210,9 +223,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setOrgSettings(settings);
       }
     } catch (err) {
+      if (background) throw err;
       setError(errorMessage(err));
     } finally {
-      setDataLoading(false);
+      if (!background) setDataLoading(false);
     }
   }, []);
 
@@ -273,9 +287,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [loadData]);
 
-  const refresh = useCallback(async () => {
-    if (user) await loadData(user);
-  }, [user, loadData]);
+  const refresh = useCallback(
+    async (background = false) => {
+      if (user) await loadData(user, background);
+    },
+    [user, loadData],
+  );
   const replaceTask = useCallback(
     (task: Task) =>
       setState((current) => ({
@@ -310,6 +327,102 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       catalogueOptionsLoading,
       catalogueOptionsError,
       loadCatalogueOptions,
+      loadImportContext: async () => {
+        if (!user || user.role === "worker")
+          throw new Error("Master data requires an owner/admin account.");
+        const [items, vendors, customers, users, categories, sizes, uoms] = await Promise.all([
+          listAll<ApiItem>("/items"),
+          listAll<ApiVendor>("/vendors"),
+          listAll<ApiCustomer>("/customers"),
+          user.role === "owner" ? listAll<ApiUser>("/users") : Promise.resolve([]),
+          apiRequest<ApiCategory[]>("/item-categories"),
+          apiRequest<ApiSizeOption[]>("/size-options"),
+          apiRequest<ApiUom[]>("/uom"),
+        ]);
+        return { items, vendors, customers, users, categories, sizes, uoms };
+      },
+      importMasterRow: async (kind, row, context, temporaryPassword) => {
+        if (!user || user.role === "worker" || (kind === "workers" && user.role !== "owner"))
+          throw new Error("Your role cannot import these records.");
+        if (row.errors.length || row.status !== "ready")
+          throw new Error("Review and validate this row before saving.");
+        const v = (key: string) => row.values[key] ?? "";
+        const find = <T,>(entries: T[], label: (entry: T) => string, value: string) =>
+          entries.find((entry) => normalize(label(entry)) === normalize(value));
+        let path: string;
+        let body: object;
+        switch (kind) {
+          case "items": {
+            const category = find(context.categories, (x) => x.name, v("category"));
+            if (v("category") && !category) throw new Error("Category no longer available.");
+            path = "/items";
+            body = {
+              name: v("name"),
+              category_id: category?.id ?? null,
+              description: v("description") || null,
+            };
+            break;
+          }
+          case "variants": {
+            const item = find(context.items, (x) => x.name, v("item"));
+            const size = find(context.sizes, (x) => x.label, v("size"));
+            const uom = find(context.uoms, (x) => x.code, v("uom"));
+            if (!item || !uom || (v("size") && !size))
+              throw new Error("Item, size or unit no longer available.");
+            path = `/items/${encodeURIComponent(item.id)}/variants`;
+            body = {
+              size_option_id: size?.id ?? null,
+              uom_id: uom.id,
+              sku: v("sku") || null,
+              description: v("description") || null,
+              attributes: {},
+            };
+            break;
+          }
+          case "vendors":
+          case "customers":
+            path = kind === "vendors" ? "/vendors" : "/customers";
+            body = {
+              name: v("name"),
+              contact_person: v("contact_person") || null,
+              phone: v("phone") || null,
+              address: v("address") || null,
+              ...(kind === "customers" ? { email: v("email") || null } : {}),
+            };
+            break;
+          case "workers":
+            if (temporaryPassword.length < 8 || temporaryPassword.length > 128)
+              throw new Error("Temporary password must contain 8–128 characters.");
+            path = "/users";
+            body = {
+              username: v("username"),
+              name: v("name"),
+              role: "worker",
+              password: temporaryPassword,
+              phone: v("phone") || null,
+              email: v("email") || null,
+            };
+            break;
+          case "categories":
+            path = "/item-categories";
+            body = { name: v("name") };
+            break;
+          case "sizes":
+            path = "/size-options";
+            body = { label: v("label") };
+            break;
+          case "uoms":
+            path = "/uom";
+            body = {
+              code: v("code"),
+              name: v("name"),
+              symbol: v("symbol"),
+              allows_decimal: v("allows_decimal") === "true",
+            };
+            break;
+        }
+        await apiRequest(path, { method: "POST", body });
+      },
       login: async (identifier, password) => {
         await loginRequest(identifier, password);
         const me = await apiRequest<ApiUser>("/auth/me");
@@ -427,6 +540,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           method: "POST",
           body: { project_id: draft.projectId, notes: draft.instructions || null },
         });
+        draft.onRequestCreated?.({ id: request.id, code: request.code });
         try {
           await apiRequest<ApiRequest>(`/requests/${encodeURIComponent(request.id)}/items:bulk`, {
             method: "POST",
@@ -583,9 +697,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return created;
       },
       transitionTask: async (id, status, note, photo) => {
+        const task = state.tasks.find((entry) => entry.id === id);
+        if (
+          !task ||
+          !user ||
+          (user.role === "worker" && task.workerId !== user.id) ||
+          !task.allowedTransitions.includes(status)
+        )
+          throw new Error("This status update is not allowed for your task.");
         const attachmentId = await withOptionalPhoto(photo);
         try {
-          if (status === "completed") {
+          if (status === "completed" && user.role !== "worker") {
             const result = await apiRequest<{ assignment: ApiAssignment }>(
               `/assignments/${encodeURIComponent(id)}/confirm-completion`,
               { method: "POST", body: {} },

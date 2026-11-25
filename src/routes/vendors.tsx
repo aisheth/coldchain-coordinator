@@ -1,3 +1,6 @@
+import { useDraft, draftField } from "@/lib/drafts";
+import { DraftNotice } from "@/components/app/DraftNotice";
+import { ImportLink } from "@/components/app/ImportLink";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { LoaderCircle, MapPin, Phone, Plus } from "lucide-react";
@@ -15,9 +18,15 @@ export const Route = createFileRoute("/vendors")({
 });
 
 function Vendors() {
-  const { state, addVendor } = useStore();
-  const blank = { name: "", contact: "", phone: "", address: "" };
-  const [d, setD] = useState(blank);
+  const { state, user, addVendor } = useStore();
+  const draft = useDraft(user, "master:vendors:new", {
+    name: "",
+    contact: "",
+    phone: "",
+    address: "",
+  });
+  const d = draft.data;
+  const setD = draft.setData;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function add() {
@@ -25,7 +34,7 @@ function Vendors() {
     setError("");
     try {
       await addVendor(d);
-      setD(blank);
+      draft.clear();
       toast.success("Vendor added");
     } catch (err) {
       setError(errorMessage(err));
@@ -35,7 +44,11 @@ function Vendors() {
   }
   return (
     <>
-      <PageHeader title="Vendors" subtitle="Where your team collects materials." />
+      <PageHeader
+        title="Vendors"
+        subtitle="Where your team collects materials."
+        actions={<ImportLink area="vendors" />}
+      />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {state.vendors.map((v) => (
           <Card key={v.id} className="p-5 text-sm">
@@ -56,27 +69,30 @@ function Vendors() {
         ))}
         <Card className="space-y-3 border-dashed p-5">
           <p className="font-semibold">Add vendor</p>
-          {(["name", "contact", "phone", "address"] as const).map((k) => (
-            <Field key={k} label={k.charAt(0).toUpperCase() + k.slice(1)}>
-              <Input value={d[k]} onChange={(e) => setD({ ...d, [k]: e.target.value })} />
-            </Field>
-          ))}
-          <p className="text-xs text-muted-foreground">
-            Vendor specialty is not supported by the live API.
-          </p>
-          {error && (
-            <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
-              {error}
+          <DraftNotice draft={draft} />
+          <fieldset disabled={draft.pending || busy} className="space-y-3">
+            {(["name", "contact", "phone", "address"] as const).map((k) => (
+              <Field key={k} label={k.charAt(0).toUpperCase() + k.slice(1)}>
+                <Input value={d[k]} onChange={(e) => setD({ ...d, [k]: e.target.value })} />
+              </Field>
+            ))}
+            <p className="text-xs text-muted-foreground">
+              Vendor specialty is not supported by the live API.
             </p>
-          )}
-          <Button disabled={!d.name || busy} onClick={() => void add()}>
-            {busy ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
+            {error && (
+              <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
+                {error}
+              </p>
             )}
-            Add vendor
-          </Button>
+            <Button disabled={!d.name || busy} onClick={() => void add()}>
+              {busy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Add vendor
+            </Button>
+          </fieldset>
         </Card>
       </div>
     </>

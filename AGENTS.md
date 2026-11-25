@@ -36,3 +36,7 @@ use the editor.
 - All app data goes through `src/lib/store.tsx` (React context backed by the live FastAPI API); keep HTTP, token, and error handling in `src/lib/api.ts`.
 - Material picker filtering lives as pure functions in `src/lib/procurement.ts` (tested); UI must not duplicate that logic.
 - Owner vs worker layout is chosen in `__root.tsx` by the `/worker` path prefix.
+
+- CSV imports use one shared validator/runner, with all API reads/writes in the existing store; this keeps preview validation and per-row results consistent without inventing bulk endpoints.
+- Browser-local form drafts are keyed by organization, user and form/entity and exclude credential/binary fields; synchronous writes preserve navigation input without submitting transactions.
+- Worker state is derived only from own assignment summaries and filtered again at the adapter/detail boundary; role-specific routes and backend permissions remain authoritative.

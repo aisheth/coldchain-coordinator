@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ImportLink } from "@/components/app/ImportLink";
 import { Plus, MapPin, Calendar, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Card, PageHeader, ProjectStatusPill } from "@/components/app/ui";
@@ -28,10 +29,13 @@ function Projects() {
         title="Projects"
         subtitle="Customer orders and installation sites."
         actions={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
-            New project
-          </Button>
+          <div className="flex gap-2">
+            <ImportLink area="customers" />
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New project
+            </Button>
+          </div>
         }
       />
       <div className="relative mb-4 max-w-sm">
@@ -73,18 +77,16 @@ function Projects() {
           );
         })}
       </div>
-      {open && (
-        <ProjectForm
-          open={open}
-          onOpenChange={setOpen}
-          onSave={async (d) => {
-            const p = await addProject(d);
-            setOpen(false);
-            toast.success("Project created");
-            await nav({ to: "/projects/$id", params: { id: p.id } });
-          }}
-        />
-      )}
+      <ProjectForm
+        open={open}
+        onOpenChange={setOpen}
+        onSave={async (d) => {
+          const p = await addProject(d);
+          setOpen(false);
+          toast.success("Project created");
+          await nav({ to: "/projects/$id", params: { id: p.id } });
+        }}
+      />
     </>
   );
 }

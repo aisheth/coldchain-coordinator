@@ -27,6 +27,12 @@ The app connects to `https://cold-chain-clin.onrender.com` by default. Set the p
 
 Sign in with an account created in that backend. Access and refresh tokens are kept in tab-scoped browser session storage. Never add database credentials, `SECRET_KEY`, or other private values to `VITE_*` variables.
 
+## CSV imports and local drafts
+
+Owner/admin master-data pages link to `/imports`. Download the template for the chosen area, review row errors and duplicates, and explicitly confirm before saving. Reference import order is categories/size options/UOMs, items, then variants. Importing worker accounts is conservatively owner-only and always creates `role=worker`; temporary passwords are entered separately, never in CSV files or reports. All writes use existing single-record API endpoints, with partial results retained on-screen and downloadable. Rechecking retries only eligible failed/invalid rows, never saved rows. Network/server errors with unknown write outcomes are excluded from automatic retries and require checking saved records first. No projects or transactions are bulk imported.
+
+Unsaved non-secret form fields are written synchronously to browser-local storage under organization/user/form/entity keys. Returning to a form offers Resume/Discard; successful saves clear the corresponding draft. Drafts are local to this browser/device, not shared across devices, and excluded from sign-in/password-change forms. Photos and temporary account passwords must be reselected/reentered. Local draft discard never deletes server records. A partially created procurement request is checkpointed in its draft and resubmission blocked, because this frontend cannot safely infer whether each non-idempotent stage completed.
+
 ## Built with
 
 - TanStack Start

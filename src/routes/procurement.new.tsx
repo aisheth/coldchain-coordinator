@@ -1,3 +1,5 @@
+import { useDraft, draftField } from "@/lib/drafts";
+import { DraftNotice } from "@/components/app/DraftNotice";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -22,22 +24,43 @@ export const Route = createFileRoute("/procurement/new")({
 
 function NewTask() {
   const { project: initialProject } = Route.useSearch();
-  const { state, createTask, addVendor } = useStore();
+  const { state, user, createTask, addVendor } = useStore();
   const nav = useNavigate();
-  const [projectId, setProjectId] = useState(initialProject ?? "");
-  const [list, setList] = useState<MaterialLine[]>([]);
-  const [finalized, setFinalized] = useState(false);
-  const [workerId, setWorkerId] = useState("");
-  const [vendorId, setVendorId] = useState("");
-  const [newVendor, setNewVendor] = useState({ name: "", phone: "", address: "", contact: "" });
-  const [instructions, setInstructions] = useState("");
-  const project = state.projects.find((p) => p.id === projectId);
-  const [site, setSite] = useState(project?.address ?? "");
-  const [due, setDue] = useState("");
+  const draft = useDraft(user, `procurement:new:${initialProject ?? "all"}`, {
+    projectId: initialProject ?? "",
+    list: [] as MaterialLine[],
+    finalized: false,
+    workerId: "",
+    vendorId: "",
+    newVendor: { name: "", phone: "", address: "", contact: "" },
+    instructions: "",
+    site: state.projects.find((p) => p.id === initialProject)?.address ?? "",
+    due: "",
+    createdRequest: null as { id: string; code: string } | null,
+    picker: {
+      category: "",
+      q: "",
+      itemId: "",
+      variantId: "",
+      qty: "1",
+      remarks: "",
+      editing: null as string | null,
+    },
+  });
+  const [projectId, setProjectId] = draftField(draft, "projectId");
+  const [list, setList] = draftField(draft, "list");
+  const [finalized, setFinalized] = draftField(draft, "finalized");
+  const [workerId, setWorkerId] = draftField(draft, "workerId");
+  const [vendorId, setVendorId] = draftField(draft, "vendorId");
+  const [newVendor, setNewVendor] = draftField(draft, "newVendor");
+  const [instructions, setInstructions] = draftField(draft, "instructions");
+  const [site, setSite] = draftField(draft, "site");
+  const [due, setDue] = draftField(draft, "due");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const canAssign = Boolean(
+    !draft.data.createdRequest &&
     finalized &&
     projectId &&
     workerId &&
@@ -51,7 +74,10 @@ function NewTask() {
     setError("");
     try {
       let vId = vendorId;
-      if (vendorId === "new") vId = (await addVendor(newVendor)).id;
+      if (vendorId === "new") {
+        vId = (await addVendor(newVendor)).id;
+        setVendorId(vId);
+      }
       const task = await createTask({
         projectId,
         workerId,
@@ -60,10 +86,13 @@ function NewTask() {
         instructions,
         deliverySite: site,
         dueDate: due,
+        onRequestCreated: (request) =>
+          draft.setData((data) => ({ ...data, createdRequest: request })),
       });
       toast.success(
         `${task.ref} assigned to ${state.workers.find((w) => w.id === workerId)?.name ?? task.workerName}`,
       );
+      draft.clear();
       await nav({ to: "/tasks/$id", params: { id: task.id } });
     } catch (err) {
       setError(errorMessage(err));
@@ -78,7 +107,16 @@ function NewTask() {
         title="New procurement task"
         subtitle="1. Choose project · 2. Build material list · 3. Assign worker"
       />
-      <div className="space-y-6">
+      <DraftNotice draft={draft} />
+      {draft.data.createdRequest && (
+        <p role="alert" className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">
+          Request {draft.data.createdRequest.code} already exists, but this form has not confirmed a
+          complete assignment. Your draft is retained; another submission is blocked to avoid
+          duplicating the request. Check the saved request with the owner before starting over.
+          Discarding this local draft does not delete the saved request.
+        </p>
+      )}
+      <fieldset disabled={draft.pending || busy} className="space-y-6">
         <Card className="p-5">
           <h2 className="mb-4 font-semibold">1. Project</h2>
           <Field label="Project" className="max-w-md">
@@ -127,7 +165,13 @@ function NewTask() {
               Material list finalized with {list.length} items. Continue to assign a worker.
             </div>
           ) : (
-            <MaterialPicker catalogue={state.catalogue} list={list} onChange={setList} />
+            <MaterialPicker
+              catalogue={state.catalogue}
+              list={list}
+              onChange={setList}
+              input={draft.data.picker}
+              onInputChange={(picker) => draft.setData((d) => ({ ...d, picker }))}
+            />
           )}
         </Card>
 
@@ -218,7 +262,7 @@ function NewTask() {
             </Button>
           </div>
         </Card>
-      </div>
+      </fieldset>
     </>
   );
 }

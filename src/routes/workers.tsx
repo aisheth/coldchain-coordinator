@@ -1,3 +1,6 @@
+import { useDraft, draftField } from "@/lib/drafts";
+import { DraftNotice } from "@/components/app/DraftNotice";
+import { ImportLink } from "@/components/app/ImportLink";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { LoaderCircle, Phone, Plus } from "lucide-react";
@@ -16,17 +19,20 @@ export const Route = createFileRoute("/workers")({
 });
 
 function Workers() {
-  const { state, addWorker } = useStore();
-  const blank = { name: "", username: "", password: "", phone: "" };
-  const [d, setD] = useState(blank);
+  const { state, user, addWorker } = useStore();
+  const draft = useDraft(user, "master:workers:new", { name: "", username: "", phone: "" });
+  const d = draft.data;
+  const setD = draft.setData;
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function add() {
     setBusy(true);
     setError("");
     try {
-      await addWorker(d);
-      setD(blank);
+      await addWorker({ ...d, password });
+      setPassword("");
+      draft.clear();
       toast.success("Worker account created");
     } catch (err) {
       setError(errorMessage(err));
@@ -36,7 +42,11 @@ function Workers() {
   }
   return (
     <>
-      <PageHeader title="Workers" subtitle="Live worker accounts and assignments." />
+      <PageHeader
+        title="Workers"
+        subtitle="Live worker accounts and assignments."
+        actions={user?.role === "owner" ? <ImportLink area="workers" /> : undefined}
+      />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {state.workers.map((w) => {
           const tasks = state.tasks.filter((t) => t.workerId === w.id);
@@ -84,47 +94,50 @@ function Workers() {
         })}
         <Card className="space-y-3 border-dashed p-5">
           <p className="font-semibold">Add worker</p>
-          <Field label="Name">
-            <Input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
-          </Field>
-          <Field label="Username">
-            <Input
-              autoComplete="off"
-              value={d.username}
-              onChange={(e) => setD({ ...d, username: e.target.value })}
-            />
-          </Field>
-          <Field label="Temporary password (at least 8 characters)">
-            <Input
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              value={d.password}
-              onChange={(e) => setD({ ...d, password: e.target.value })}
-            />
-          </Field>
-          <Field label="Phone">
-            <Input value={d.phone} onChange={(e) => setD({ ...d, phone: e.target.value })} />
-          </Field>
-          <p className="text-xs text-muted-foreground">
-            Worker area is not supported by the live API.
-          </p>
-          {error && (
-            <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
-              {error}
+          <DraftNotice draft={draft} />
+          <fieldset disabled={draft.pending || busy} className="space-y-3">
+            <Field label="Name">
+              <Input value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
+            </Field>
+            <Field label="Username">
+              <Input
+                autoComplete="off"
+                value={d.username}
+                onChange={(e) => setD({ ...d, username: e.target.value })}
+              />
+            </Field>
+            <Field label="Temporary password (at least 8 characters)">
+              <Input
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Field label="Phone">
+              <Input value={d.phone} onChange={(e) => setD({ ...d, phone: e.target.value })} />
+            </Field>
+            <p className="text-xs text-muted-foreground">
+              Worker area is not supported by the live API.
             </p>
-          )}
-          <Button
-            disabled={!d.name || d.username.length < 3 || d.password.length < 8 || busy}
-            onClick={() => void add()}
-          >
-            {busy ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="h-4 w-4" />
+            {error && (
+              <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger">
+                {error}
+              </p>
             )}
-            Add worker
-          </Button>
+            <Button
+              disabled={!d.name || d.username.length < 3 || password.length < 8 || busy}
+              onClick={() => void add()}
+            >
+              {busy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+              Add worker
+            </Button>
+          </fieldset>
         </Card>
       </div>
     </>

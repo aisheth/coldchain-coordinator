@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as CatalogueRouteImport } from './routes/catalogue'
+import { Route as ImportsRouteImport } from './routes/imports'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as VendorsRouteImport } from './routes/vendors'
 import { Route as WorkersRouteImport } from './routes/workers'
@@ -38,6 +39,11 @@ const ActivityRoute = ActivityRouteImport.update({
 const CatalogueRoute = CatalogueRouteImport.update({
   id: '/catalogue',
   path: '/catalogue',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportsRoute = ImportsRouteImport.update({
+  id: '/imports',
+  path: '/imports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -105,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/catalogue': typeof CatalogueRoute
+  '/imports': typeof ImportsRoute
   '/settings': typeof SettingsRoute
   '/vendors': typeof VendorsRoute
   '/workers': typeof WorkersRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/catalogue': typeof CatalogueRoute
+  '/imports': typeof ImportsRoute
   '/settings': typeof SettingsRoute
   '/vendors': typeof VendorsRoute
   '/workers': typeof WorkersRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/activity': typeof ActivityRoute
   '/catalogue': typeof CatalogueRoute
+  '/imports': typeof ImportsRoute
   '/settings': typeof SettingsRoute
   '/vendors': typeof VendorsRoute
   '/workers': typeof WorkersRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/catalogue'
+    | '/imports'
     | '/settings'
     | '/vendors'
     | '/workers'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/catalogue'
+    | '/imports'
     | '/settings'
     | '/vendors'
     | '/workers'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/'
     | '/activity'
     | '/catalogue'
+    | '/imports'
     | '/settings'
     | '/vendors'
     | '/workers'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivityRoute: typeof ActivityRoute
   CatalogueRoute: typeof CatalogueRoute
+  ImportsRoute: typeof ImportsRoute
   SettingsRoute: typeof SettingsRoute
   VendorsRoute: typeof VendorsRoute
   WorkersRoute: typeof WorkersRoute
@@ -246,6 +259,13 @@ declare module '@tanstack/react-router' {
       path: '/catalogue'
       fullPath: '/catalogue'
       preLoaderRoute: typeof CatalogueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/imports': {
+      id: '/imports'
+      path: '/imports'
+      fullPath: '/imports'
+      preLoaderRoute: typeof ImportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -339,6 +359,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivityRoute: ActivityRoute,
   CatalogueRoute: CatalogueRoute,
+  ImportsRoute: ImportsRoute,
   SettingsRoute: SettingsRoute,
   VendorsRoute: VendorsRoute,
   WorkersRoute: WorkersRoute,
