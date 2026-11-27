@@ -32,7 +32,7 @@ describe("live API client", () => {
     await apiRequest("/projects?limit=200");
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "https://cold-chain-clin.onrender.com/api/v1/auth/login",
+      "http://localhost:8000/api/v1/auth/login",
     );
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
       identifier: "owner",
@@ -41,7 +41,7 @@ describe("live API client", () => {
     const headers = new Headers(fetchMock.mock.calls[1]?.[1]?.headers);
     expect(headers.get("Authorization")).toBe("Bearer access-1");
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      "https://cold-chain-clin.onrender.com/api/v1/projects?limit=200",
+      "http://localhost:8000/api/v1/projects?limit=200",
     );
   });
 
@@ -88,7 +88,7 @@ describe("live API client", () => {
     await expect(apiRequest("/auth/me")).resolves.toEqual({ id: "user-1" });
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
-      "https://cold-chain-clin.onrender.com/api/v1/auth/refresh",
+      "http://localhost:8000/api/v1/auth/refresh",
     );
     const retryHeaders = new Headers(fetchMock.mock.calls[2]?.[1]?.headers);
     expect(retryHeaders.get("Authorization")).toBe("Bearer access-new");
