@@ -1,47 +1,94 @@
-# Welcome to your Lovable project
+# Cold-Chain Coordinator
 
-This project was built with [Lovable](https://lovable.dev).
+Cold-Chain Coordinator is a procurement and field-work tracking application with a React/TanStack frontend and a FastAPI backend.
 
-## Build with Lovable
+## Repository layout
 
-Open your project in the [Lovable editor](https://lovable.dev) and keep building.
+```text
+src/, public/, package.json       # Web frontend
+procurement-backend/              # FastAPI API, tests, and local PostgreSQL stack
+```
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: connect the project to GitHub and every change made in Lovable is committed straight to your repository.
-- **Full ownership**: this code is yours. Push to your repository and your changes sync back into Lovable, ready for your next prompt.
+The frontend and API are separate applications. Each self-hosted organization should use its own API, database, and frontend configuration.
 
-## Development
+## Run locally
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requirements: Node.js supported by Vite 8 (20.19+ or 22.12+), Python 3.11+, and Docker Desktop.
 
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+### 1. Start the API and database
+
+In PowerShell, from the repository root:
+
+```powershell
+if (-not (Test-Path procurement-backend\.env)) {
+    Copy-Item procurement-backend\.env.example procurement-backend\.env
+}
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Put the generated value in `SECRET_KEY` in `procurement-backend\.env`. Keep this file private. The example database credentials are only for local development.
+
+Then start the API and PostgreSQL:
+
+```powershell
+Set-Location procurement-backend
+docker compose up --build
+```
+
+The API is available at `http://localhost:8000`; its Swagger interface is at `http://localhost:8000/docs`. In another terminal, create an owner; the password prompt does not echo the password:
+
+```powershell
+Set-Location procurement-backend
+docker compose exec api python -m app.cli create-owner --org "My Company" --username owner --name "Owner Name"
+```
+
+### 2. Start the frontend
+
+In a second terminal, from the repository root:
+
+```powershell
+Copy-Item .env.example .env.local
+npm install
 npm run dev
 ```
 
-## Live API configuration
+Open the local URL printed by Vite (normally `http://localhost:5173`). The frontend template points to the local API at `http://localhost:8000`. Set `VITE_API_BASE_URL` in `.env.local` if using a different API origin. Only public API origins belong in `VITE_*` variables; never put database URLs or signing keys there.
 
-The app connects to `https://cold-chain-clin.onrender.com` by default. Set the public `VITE_API_BASE_URL` environment variable to use another FastAPI origin; resource paths are appended under `/api/v1`. See `.env.example`.
+## Tests and checks
 
-Sign in with an account created in that backend. Access and refresh tokens are kept in tab-scoped browser session storage. Never add database credentials, `SECRET_KEY`, or other private values to `VITE_*` variables.
+Backend tests:
 
-## CSV imports and local drafts
+```powershell
+Set-Location procurement-backend
+$env:SECRET_KEY = "test-only-signing-key-with-at-least-32-characters"
+python -m pip install -r requirements.txt
+pytest
+```
 
-Owner/admin master-data pages link to `/imports`. Download the template for the chosen area, review row errors and duplicates, and explicitly confirm before saving. Reference import order is categories/size options/UOMs, items, then variants. Importing worker accounts is conservatively owner-only and always creates `role=worker`; temporary passwords are entered separately, never in CSV files or reports. All writes use existing single-record API endpoints, with partial results retained on-screen and downloadable. Rechecking retries only eligible failed/invalid rows, never saved rows. Network/server errors with unknown write outcomes are excluded from automatic retries and require checking saved records first. No projects or transactions are bulk imported.
+Frontend tests and production build, from the repository root:
 
-Unsaved non-secret form fields are written synchronously to browser-local storage under organization/user/form/entity keys. Returning to a form offers Resume/Discard; successful saves clear the corresponding draft. Drafts are local to this browser/device, not shared across devices, and excluded from sign-in/password-change forms. Photos and temporary account passwords must be reselected/reentered. Local draft discard never deletes server records. A partially created procurement request is checkpointed in its draft and resubmission blocked, because this frontend cannot safely infer whether each non-idempotent stage completed.
+```powershell
+npm test
+npm run build
+```
 
-## Worker account management
+## Self-hosted deployment
 
-Owner/admin Users management can edit a worker's name, email, phone and active status through `PATCH /users/{user_id}`. Inactive workers are excluded from new assignment choices; existing assignments and history are not changed. Password reset is a separate confirmed `POST /users/{user_id}/reset-password` action. Its temporary password is held only in the open dialog's React state, never written to drafts, browser storage or application logs, and is cleared when the dialog closes. Workers cannot call these management actions from the app and retain only their own task/profile experience.
+Deploy the frontend and API separately:
 
-The backend's `must_change_password` account flag gates the entire app behind the self-service password-change form. A successful `/auth/change-password` response returns replacement access and refresh tokens; the client saves both immediately so it does not continue with revoked credentials. Resetting another user's password never retrieves their old password or switches the owner into that user's account.
+1. Deploy `procurement-backend/` as a Docker web service and provision a PostgreSQL database for that installation.
+2. Set `DATABASE_URL` (using the `postgresql+psycopg://` driver), a unique `SECRET_KEY` of at least 32 characters, and exact frontend origins in `CORS_ORIGINS` using the host's secret/environment settings.
+3. Configure `UPLOAD_DIR` on persistent storage if delivery photos must survive restarts.
+4. Deploy the frontend as a static/web application with `VITE_API_BASE_URL` set to the public API origin.
+5. Create the first owner in the backend environment after the API is healthy. Never include a password in a command, source file, screenshot, or frontend variable.
+6. Test owner and worker sign-in, catalogue operations, task assignment, worker updates, and photo persistence before inviting users.
 
-## Built with
+The exact host-specific deployment configuration can be added once the hosting provider is chosen. GitHub stores source code; it does not run the application by itself.
 
-- TanStack Start
-- TypeScript
-- React
-- Tailwind CSS
+## Security and project status
+
+- Never commit `.env` files, database files, uploaded files, credentials, or real customer/worker records.
+- Rotate credentials that have been shared or exposed before publishing or reusing the deployment.
+- The app has no public self-sign-up flow. Create an owner for each self-hosted installation.
+- No license has been selected. Keep the repository private until one is chosen; do not describe the project as open source before then.
+- Backend tables currently use `create_all`; review the backend README's production limitations before relying on it for critical business data.

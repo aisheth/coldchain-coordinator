@@ -1,0 +1,16 @@
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from .config import settings
+
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(engine, expire_on_commit=False)
+
+
+def get_db():
+    """One session (= one transaction scope) per request."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
