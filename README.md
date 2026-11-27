@@ -90,5 +90,5 @@ The exact host-specific deployment configuration can be added once the hosting p
 - Never commit `.env` files, database files, uploaded files, credentials, or real customer/worker records.
 - Rotate credentials that have been shared or exposed before publishing or reusing the deployment.
 - The app has no public self-sign-up flow. Create an owner for each self-hosted installation.
-- No license has been selected. Keep the repository private until one is chosen; do not describe the project as open source before then.
+- This project is licensed under the MIT License; see [LICENSE](./LICENSE). You may use, modify, and redistribute it under the license terms.
 - Backend tables currently use `create_all`; review the backend README's production limitations before relying on it for critical business data.
